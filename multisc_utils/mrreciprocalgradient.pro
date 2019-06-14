@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;
 ; NAME:
-;       MrWebGet__DEFINE
+;       MrReciprocalGradient
 ;
 ;*****************************************************************************************
 ;   Copyright (c) 2014, University of New Hampshire                                      ;
@@ -158,9 +158,9 @@ function MrReciprocalGradient, r1, r2, r3, r4, v1, v2, v3, v4
 	if order le 1 then begin
 		grad = fltarr(nv, 3)
 		for i = 0, 3 do begin
-			grad[*,0] += recvec[*,0,i] * *pv[i]  ; dS / dx
-			grad[*,1] += recvec[*,1,i] * *pv[i]  ; dS / dy
-			grad[*,2] += recvec[*,2,i] * *pv[i]  ; dS / dz
+			grad[*,0] += ( recvec[*,0,i] * *pv[i] )  ; dS / dx
+			grad[*,1] += ( recvec[*,1,i] * *pv[i] )  ; dS / dy
+			grad[*,2] += ( recvec[*,2,i] * *pv[i] )  ; dS / dz
 		endfor
 		;Transpose to [component, time]: V_it
 		grad = transpose(grad, [1,0])
@@ -170,15 +170,15 @@ function MrReciprocalGradient, r1, r2, r3, r4, v1, v2, v3, v4
 		grad = fltarr(nv, 3, 3)
 		for i = 0, 3 do begin
 			;T_tij = ∆_tiv * V_tj
-			grad[*,0,0] += recvec[*,0,i] * (*pv[i])[*,0]  ; dvx / dx  --> T_xx
-			grad[*,0,1] += recvec[*,1,i] * (*pv[i])[*,0]  ; dvy / dx  --> T_xy
-			grad[*,0,2] += recvec[*,2,i] * (*pv[i])[*,0]  ; dvz / dx  --> T_xz
-			grad[*,1,0] += recvec[*,0,i] * (*pv[i])[*,1]  ; dvx / dy  --> T_yx
-			grad[*,1,1] += recvec[*,1,i] * (*pv[i])[*,1]  ; dvy / dy  --> T_yy
-			grad[*,1,2] += recvec[*,2,i] * (*pv[i])[*,1]  ; dvz / dy  --> T_yz
-			grad[*,2,0] += recvec[*,0,i] * (*pv[i])[*,2]  ; dvx / dz  --> T_zx
-			grad[*,2,1] += recvec[*,1,i] * (*pv[i])[*,2]  ; dvy / dz  --> T_zy
-			grad[*,2,2] += recvec[*,2,i] * (*pv[i])[*,2]  ; dvz / dz  --> T_zz
+			grad[*,0,0] += ( recvec[*,0,i] * (*pv[i])[*,0] )  ; dvx / dx  --> T_xx
+			grad[*,0,1] += ( recvec[*,1,i] * (*pv[i])[*,0] )  ; dvy / dx  --> T_xy
+			grad[*,0,2] += ( recvec[*,2,i] * (*pv[i])[*,0] )  ; dvz / dx  --> T_xz
+			grad[*,1,0] += ( recvec[*,0,i] * (*pv[i])[*,1] )  ; dvx / dy  --> T_yx
+			grad[*,1,1] += ( recvec[*,1,i] * (*pv[i])[*,1] )  ; dvy / dy  --> T_yy
+			grad[*,1,2] += ( recvec[*,2,i] * (*pv[i])[*,1] )  ; dvz / dy  --> T_yz
+			grad[*,2,0] += ( recvec[*,0,i] * (*pv[i])[*,2] )  ; dvx / dz  --> T_zx
+			grad[*,2,1] += ( recvec[*,1,i] * (*pv[i])[*,2] )  ; dvy / dz  --> T_zy
+			grad[*,2,2] += ( recvec[*,2,i] * (*pv[i])[*,2] )  ; dvz / dz  --> T_zz
 		endfor
 		;Transpose to [component, component, vertex]
 		;   - This is such that T_tij --> T_jit

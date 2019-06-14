@@ -407,12 +407,12 @@ WINDOW = window
             
             ;Interpolate if we can.
             if nFill gt 0 && pct_fill le interp_pct then begin
-                if tf_vverbose then print, FORMAT='(%"Interval %i is %0.1f\% fill values. Interpolating.")', i+1, pct_fill
+                if tf_vverbose then print, FORMAT='(%"Interval %i of %i is %0.1f\% fill values. Interpolating.")', i+1, n_intervals, pct_fill
                 for j = 0, dims[1] - 1 do $
                     fill_data[0,j] = MrInterpol(fill_data[*,j], fillval, findgen(nfft))
             ;Replace if we must.
             endif else if pct_fill gt 0.0 then begin
-                if tf_verbose then print, FORMAT='(%"Interval %i is %0.1f\% fill values (> %0.1f\%)")', i+1, pct_fill, interp_pct
+                if tf_verbose then print, FORMAT='(%"Interval %i of %i is %0.1f\% fill values (> %0.1f\%)")', i+1, n_intervals, pct_fill, interp_pct
                 fill_data = replace_fillval(fill_data, fillval)
             endif
         endif

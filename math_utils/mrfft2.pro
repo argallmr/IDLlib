@@ -349,13 +349,13 @@ WINDOW = window
 			if nFill gt 0 then begin
 				;Interpolate if we can.
 				if pct_fill le interp_pct then begin
-					if tf_verbose then print, FORMAT='(%"Interval %i has %i of %i (%0.1f\%) fill values. Interpolating.")', i+1, nFill, nfft, pct_fill
+					if tf_verbose then print, FORMAT='(%"Interval %i of %i has %i of %i (%0.1f\%) fill values. Interpolating.")', i+1, n_int, nFill, nfft, pct_fill
 					for j = 0, n2 - 1 do $
 						dtemp[0,j] = interpol(dtemp[igood,j], igood, lindgen(nfft))
 	
 				;Replace if we must.
 				endif else begin
-					if tf_verbose then print, FORMAT='(%"Interval %i has %i of %i (%0.1f\%) fill values.")', i+1, nFill, nfft, pct_fill
+					if tf_verbose then print, FORMAT='(%"Interval %i of %i has %i of %i (%0.1f\%) fill values.")', i+1, n_int, nFill, nfft, pct_fill
 					dtemp[iFill,*] = tf_double ? !values.d_nan : !values.f_nan
 				endelse
 			endif
