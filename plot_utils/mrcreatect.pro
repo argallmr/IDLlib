@@ -41,17 +41,18 @@
 ; :Author:
 ;   Matthew Argall::
 ;       University of New Hampshire
-;       Morse Hall, Room 113
+;       Morse Hall, Room 348
 ;       8 College Rd.
 ;       Durham, NH, 03824
-;       matthew.argall@wildcats.unh.edu
+;       matthew.argall@unh.edu
 ;
 ; :History:
 ;   Modification History::
 ;       09/23/2013  -   Written by Matthew Argall
 ;       10/02/2013  -   Added the RED, GREEN, BLUE, NCOLORS and CLIP keywords.
+;       12/03/2017  -   Added the NAME parameter and the 'rainbow3' color table. - MRA
 ;-
-function MrCreateCT, $
+function MrCreateCT, name, $
 CLIP = clip, $
 NCOLORS = nColors, $
 REVERSE = reverse, $
@@ -67,11 +68,22 @@ RWB = rwb
 ;---------------------------------------------------------------------
 ;Check Inputs ////////////////////////////////////////////////////////
 ;---------------------------------------------------------------------
-    blue  = keyword_set(blue)
-    green = keyword_set(green)
-    red   = keyword_set(red)
-    rwb   = keyword_set(rwb)
-    if (blue + green + red + rwb ne 1) then message, 'One and only one colortable is allowed.'
+    tf_name = n_elements(name) gt 0
+    tf_blue  = keyword_set(blue)
+    tf_green = keyword_set(green)
+    tf_red   = keyword_set(red)
+    tf_rwb   = keyword_set(rwb)
+    if tf_name + tf_blue + tf_green + tf_red + tf_rwb gt 1 $
+        then message, 'NAME, BLUE, GREEN, RED, and RWB are mutually exclusive.'
+    
+    case 1 of
+        tf_blue:  cb_name = 'blue'
+        tf_red:   cb_name = 'red'
+        tf_green: cb_name = 'green'
+        tf_rwb:   cb_name = 'red-white-blue'
+        tf_name:  cb_name = name
+        else: Message, 'Either NAME or one of {BLUE | GREEN | RED | RWB} must be set.'
+    endcase
     
     reverse = keyword_set(reverse)
     row = keyword_set(row)
@@ -84,35 +96,59 @@ RWB = rwb
 ;Create Color Table //////////////////////////////////////////////////
 ;---------------------------------------------------------------------
     
-    case 1 of
+    case strlowcase(cb_name) of
         ;WHITE->BLUE
-        blue: begin
+        'blue': begin
             r = linspace(255, 0, 256)
             g = linspace(255, 0, 256)
             b = bytarr(256) + 255
         endcase
         
         ;WHITE->GREEN
-        green: begin
+        'green': begin
             r = linspace(255, 0, 256)
             g = bytarr(256) + 255
             b = linspace(255, 0, 256)
         endcase
         
         ;WHITE->RED
-        red: begin
+        'red': begin
             r = bytarr(256) + 255
             g = linspace(255, 0, 256)
             b = linspace(255, 0, 256)
         endcase
         
         ;RED->WHITE->BLUE
-        rwb: begin
+        'red-white-blue': begin
             r = [bytarr(128)+255, linspace(255, 0, 128)]
             g = [linspace(0, 255, 128), linspace(255, 0, 128)]
             b = [linspace(0, 255, 128), bytarr(128)+255]
         endcase
+
+        'rainbow3': begin
+            ;color: black - purple - blue - cyan - green - yellow - orange - red - red7
+            ;  r:     0      160       0       0      0      255      255    255    154
+            ;  g:     0       32       0     255    255      255      165      0     12
+            ;  b:     0      240     255     255      0        0        0      0     19
+            ; idx:    0       36      71     107    143      179      214    250    255
+            r = [ linspace(  0,160,37),       (linspace(160,  0,36))[1:*], (linspace(  0,  0,37))[1:*], $
+                 (linspace(  0,  0,37))[1:*], (linspace(  0,255,37))[1:*], (linspace(255,255,36))[1:*], $
+                 (linspace(255,255,37))[1:*], (linspace(255,154, 6))[1:*] ]
+            g = [ linspace(  0, 32,37),       (linspace( 32,  0,36))[1:*], (linspace(  0,255,37))[1:*], $
+                 (linspace(255,255,37))[1:*], (linspace(255,255,37))[1:*], (linspace(255,165,36))[1:*], $
+                 (linspace(165,  0,37))[1:*], (linspace(  0, 12, 6))[1:*] ]
+            b = [ linspace(  0,240,37),       (linspace(240,255,36))[1:*], (linspace(255,255,37))[1:*], $
+                 (linspace(255,  0,37))[1:*], (linspace(  0,  0,37))[1:*], (linspace(  0,  0,36))[1:*], $
+                 (linspace(  0,  0,37))[1:*], (linspace(  0, 19, 6))[1:*] ]
+        endcase
+
+        else: message, 'Colortable not recognized: "' + cb_name + '".'
     endcase
+    
+    ;Convert to byte arrays
+	r = byte(round(r))
+	g = byte(round(g))
+	b = byte(round(b))
     
 ;---------------------------------------------------------------------
 ;Select Color Range //////////////////////////////////////////////////

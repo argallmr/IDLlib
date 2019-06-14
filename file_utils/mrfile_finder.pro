@@ -93,6 +93,7 @@
 ;       2015-04-28  -   Renamed from MrFile_Search to MrFile_Finder. Removed
 ;                          SysRoot keywords. Sandwich path elements between "^"
 ;                          and "$" to search for whole words. Added example. - MRA
+;       2016-12-20  -   Recognizes the "*" wildcard. - MRA
 ;-
 function MrFile_Finder, pattern, $
 COUNT=count, $
@@ -134,7 +135,7 @@ PATHSEP=pathsep
 
 	;Find the directory elements with a "%" token identifier
 	allTokens = strjoin(MrTokens())
-	iToken    = where(stregex(parts, '%', /BOOLEAN), nTokens)
+	iToken    = where(stregex(parts, '(%|\*)', /BOOLEAN), nTokens)
 
 	;Parse the pattern into a part without tokens and a part with tokens
 	;   root       - Leading path segments without tokens
@@ -159,7 +160,7 @@ PATHSEP=pathsep
 			subpattern = MrTokens_ToRegex(subpattern)
 		endcase
 	endcase
-	
+
 	;Look for whole words
 	subpattern = '^' + subpattern + '$'
 

@@ -56,6 +56,7 @@
 ;       03/28/2013  -   Added DOUBLE keyword. - MRA
 ;       2016/09/03  -   Simplified logic by converting to single precision last. Added
 ;                           unit conversions. Renamed from constants.pro to MrConstants.pro - MRA
+;       2018/04/30  -   Convert electron volts to kelvin and vice versa. - MRA
 ;-
 function MrConstants, const, $
 ;KEYWORDS
@@ -84,8 +85,10 @@ CGS = cgs
 	       ['Unit Conversions:'], $
 	       ['  cm2m      - centimeters to meters'     ], $
 	       ['  eV2J      - electron volts to joules'  ], $
+	       ['  eV2K      - electron volts to kelvin'  ], $
 	       ['  g2kg      - grams to kilograms'        ], $
 	       ['  J2eV      - joules to electron volts'  ], $
+	       ['  K2eV      - Kelvin to electron volts'  ], $
 	       ['  kg2g      - kilograms to grams'        ], $
 	       ['  m2km      - meters to kilometers'      ], $
 	       ['  m2cm      - meters to centimeters'     ] $
@@ -121,8 +124,10 @@ CGS = cgs
 		;UNIT CONVERSION FACTORS
 		'cm2m':      value = 1d-2                         ;Centimeters to meters
 		'ev2j':      value = 1.60218d-19                  ;Electron volts to Joules
+		'ev2k':      value = 11604.505d                    ;Electron volts to Kelvin
 		'g2kg':      value = 1d3                          ;Grams to kilograms
 		'j2ev':      value = 6.242d18                     ;Joules to electron volts
+		'k2ev':      value = 8.621738d-5                  ;Kelvin to electron volts
 		'kg2g':      value = 1d-3                         ;Kilograms to grams
 		'm2km':      value = 1d-3                         ;Meters to kilometers
 		'm2cm':      value = 1d2                          ;Meters to centimeters

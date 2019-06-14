@@ -168,7 +168,7 @@ COLORS = colors
             XRANGE=[-1,1], YRANGE=[-1,1], ZRANGE=[-1,1], /SAVE, $
             XSTYLE=5, YSTYLE=5, ZSTYLE=5, ROTZ=az, ROTX=ax, CHARSIZE=3, $
             POSITION=[0,0,1,1]
-    
+	
     ;draw the axes so that they intersect at the origin, not so that they are bordering
     ;the plotting region
     cgAxis, 0, /XAXIS, /T3D

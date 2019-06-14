@@ -121,6 +121,7 @@
 ;                           treatment of pointers and objects is limited to when they
 ;                           are scalars. - MRA
 ;       2016/07/22  -   Unintentional dependencies of NULL keyword on others. Fixed. - MRA
+;       2017/06/22  -   Scalars now register as rows and columns. - MRA
 ;-
 function MrIsA, x, type, $
  COLUMN  = column, $
@@ -264,7 +265,7 @@ function MrIsA, x, type, $
 ;-----------------------------------------------------
     if column then begin
         ;Two dimensions, the first being of size 1 (i.e. a 1xN array)
-        if x_size[0] eq 2 && x_size[1] eq 1 $
+        if x_size[0] eq 0 || (x_size[0] eq 2 && x_size[1] eq 1) $
             then tf_isa = 1 and tf_isa $
             else tf_isa = 0
     endif
@@ -375,7 +376,7 @@ function MrIsA, x, type, $
 ;-----------------------------------------------------
     if row then begin
         ;One dimension
-        if x_size[0] eq 1 $
+        if x_size[0] eq 0 || x_size[0] eq 1 $
             then tf_isa = 1 and tf_isa $
             else tf_isa = 0
     endif

@@ -81,7 +81,7 @@ RECURSIVE=recursive
 		if nMatch eq 0 then begin
 			type = size(structure.(ii), /TNAME)
 			if (type eq 'STRUCT') && recursive && (current_level lt _level) $
-				then tag_val = MrStruct_Replace_Val(structure.(ii), value, current_level+1, RECURSIVE=recursive, LEVEL=_level) $
+				then tag_val = MrStruct_ReplaceValue(structure.(ii), value, current_level+1, RECURSIVE=recursive, LEVEL=_level) $
 				else tag_val = structure.(ii)
 		endif else begin
 			tag_val = value.(iCheck)

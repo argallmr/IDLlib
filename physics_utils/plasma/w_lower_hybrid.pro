@@ -3,7 +3,7 @@
 ;+
 ;   The purpose of this program is to calculate the lower hybrid frequency::
 ;
-;       \omega_{lh} = \sqrt{\frac{1}{\Omega_{i} \Omega_{e}} + \frac{1}{\Omega_{i}^{2}}}
+;       \omega_{lh} = ( \frac{1}{\Omega_{i} \Omega_{e}} + \frac{1}{\Omega_{i}^{2}} )^{-1/2}
 ;
 ; :Categories:
 ;   Physics Utilties
@@ -39,6 +39,7 @@
 ;       01/29/2012  -   Written by Matthew Argall
 ;       07/15/2013  -   Units are now assumed to be nT and cm^-3. Angular frequency is
 ;                           returned, not frequency. - MRA
+;       2016/12/08  -   Quantity raised to negative square root (not positive). - MRA
 ;-
 function w_lower_hybrid, B, n_i
     compile_opt idl2
@@ -49,6 +50,6 @@ function w_lower_hybrid, B, n_i
 ;---------------------------------------------------------------------
 	omega_lh = (1.0 / (w_cyclotron(B, 'e-') * w_cyclotron(B, 'H+')) + $
 	            1.0 / w_plasma(n_i, 'H+')^2)^(-1.0/2.0)
-	            
-	return, omega_lh1
+	
+	return, omega_lh
 end

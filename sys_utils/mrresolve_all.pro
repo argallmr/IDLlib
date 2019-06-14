@@ -52,6 +52,11 @@
 ;       2015/02/07  -   Written by Matthew Argall
 ;       2015/03/06  -   Added the FILTER_CLASS, FILTER_FUN, and FILTER_PRO keywords.
 ;                           Use FilePath() to determine the IDL_ROOT. - MRA
+;       2017/04/03  -   Procedures and functions names that do not match the module name
+;                           cannot be found by File_Which() and are removed from the
+;                           FILES_PRO and FILES_FUN results. - MRA.
+;       2017/04/16  -   Help does not distinguish some objects as objects. Parse the set
+;                           of procedures for pros that end with __DEFINE. - MRA.
 ;-
 ;*****************************************************************************************
 ;+
@@ -69,68 +74,75 @@
 ;                           If set, object class names are parsed.
 ;-
 function MrResolve_All_ParseHelp, $
-COUNT=nRoutines, $
+COUNT=count, $
 FUNCTIONS=functions, $
 PROCEDURES=procedures, $
 OBJECTS=objects
-    compile_opt idl2
-    on_error, 2
-    
-    functions  = keyword_set(functions)
-    procedures = keyword_set(procedures)
-    objects    = keyword_set(objects)
-    if functions + procedures + objects eq 0 then procedures = 1
-    
-    ;More than one?
-    if functions + procedures + objects gt 1 then begin
-        ;Parse each one individually
-        pros = MrResolve_All_ParseHelp(/PROCEDURES)
-        funs = MrResolve_All_ParseHelp(/FUNCTIONS)
-        objs = MrResolve_All_ParseHelp(/OBJECTS)
-        
-        ;Return them all
-        return, [objs, pros, funs]
-    endif
-    
-;-----------------------------------------------------
-; Find Procedures \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-;-----------------------------------------------------
-	;Get the help
-	if objects $
-	    then help, OUTPUT=output, OBJECTS=objects, /BRIEF $
-	    else help, OUTPUT=output, FUNCTIONS=functions, PROCEDURES=procedures, /BRIEF
+	compile_opt idl2
+	on_error, 2
+
+	functions  = keyword_set(functions)
+	procedures = keyword_set(procedures)
+	objects    = keyword_set(objects)
+	if functions + procedures + objects eq 0 then procedures = 1
+
+	;More than one?
+	if functions + procedures + objects gt 1 then begin
+		;Parse each one individually
+		pros = MrResolve_All_ParseHelp(/PROCEDURES)
+		funs = MrResolve_All_ParseHelp(/FUNCTIONS)
+		objs = MrResolve_All_ParseHelp(/OBJECTS)
 	
-	nOutput = n_elements(output)
+		;Return them all
+		return, [objs, pros, funs]
+	endif
+
+;-----------------------------------------------------
+; Find Routines \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+;-----------------------------------------------------
+	;Objects
+	if objects then begin
+		;Compiled objects
+		help, OUTPUT=output, OBJECTS=objects, /BRIEF
+		output = strsplit( strjoin( temporary(output), ' '), ' ', /EXTRACT)
+		
+		;Some objects are not captured.
+		;   - Look for the __DEFINE procedures
+		help, OUTPUT=pros, /PROCEDURES, /BRIEF
+		pros = strsplit( strjoin( temporary(pros), ' '), ' ', /EXTRACT )
+		iObj = where( stregex(pros, '__DEFINE$', /BOOLEAN), nObj )
+		
+		;Find missing objects
+		if nObj gt 0 then begin
+			pros = pros[iObj]
+			
+			;Remove the __DEFINE
+			pros = stregex(pros, '^(.*)__DEFINE$', /SUBEXP, /EXTRACT)
+			pros = reform(pros[1,*])
+			
+			;Look for non-members
+			void = MrIsMember(output, pros, COMPLEMENT=iKeep, NCOMPLEMENT=nKeep)
+			if nKeep gt 0 then output = [output, temporary(pros)]
+		endif
+	
+	;Functions or Procedures
+	endif else begin
+		help, OUTPUT=output, FUNCTIONS=functions, PROCEDURES=procedures, /BRIEF
+		output = strsplit( strjoin( temporary(output), ' '), ' ', /EXTRACT)
+	endelse
+	
+	;Remove
+	;   - Compiled Procedures:
+	;   - Compiled Functions:
 	case 1 of
-	    objects:    iStart = 0
-	    procedures: iStart = 1
-	    functions:  iStart = 1
-	    else: message, 'One of OBJECTS, PROCEDURES and FUNCTIONS must be set.'
+		objects:    ;Do nothing
+		procedures: output = output[2:*]
+		functions:  output = output[2:*]
+		else: message, 'One of OBJECTS, PROCEDURES and FUNCTIONS must be set.'
 	endcase
-	
-	;Allocate memory
-	nAlloc    = 100
-	routines  = strarr(nAlloc)
-	nRoutines = 0L
-	
-	;Step through each line of output
-	for i = iStart, nOutput - 1 do begin
-	    temp_routines = strsplit(output[i], ' ', /EXTRACT, COUNT=routineCount)
-	    if routineCount eq 0 then continue
-	    
-	    ;Check for over-inflation
-	    if nRoutines+routineCount ge nAlloc then begin
-	        routines  = [routines, strarr(100)]
-	        nAlloc     += 100
-	    endif
+	count = n_elements(output)
 
-	    ;Store the procedure names
-	    routines[nRoutines:nRoutines+routineCount-1] = temp_routines
-	    nRoutines += routineCount
-	endfor
-	routines = routines[0:nRoutines-1]
-
-    return, routines
+	return, output
 end
 
 
@@ -238,12 +250,14 @@ RESOLVE_FUNCTION=resolve_function, $
 RESOLVE_EITHER=resolve_either, $
 SHOW=show, $
 SKIP_ROUTINES=skip_routines, $
-UNRESOLVED=unresolved
+UNRESOLVED=unresolved, $
+VERBOSE=verbose
 	compile_opt strictarr
 	on_error, 2
 	
 	;Show results?
 	show            = keyword_set(show)
+	quiet           = ~keyword_set(verbose)
 	no_idl_routines = keyword_set(no_idl_routines)
 	get_files_class = arg_present(files_class)
 	get_files_pro   = arg_present(files_pro)
@@ -261,14 +275,15 @@ UNRESOLVED=unresolved
 	endif
 	
 	;Resolve all that were given
-	resolve_all, /CONTINUE_ON_ERROR, /QUIET, $
+	resolve_all, /CONTINUE_ON_ERROR, $
 	             CLASS             = resolve_class, $
+	             QUIET             = quiet, $
 	             RESOLVE_EITHER    = resolve_either, $
 	             RESOLVE_PROCEDURE = resolve_procedure, $
 	             RESOLVE_FUNCTION  = resolve_function, $
 	             SKIP_ROUTINES     = skip_routines, $
 	             UNRESOLVED        = unresolved
-	
+
 ;-----------------------------------------------------
 ; Fine Routine Names \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
@@ -288,6 +303,7 @@ UNRESOLVED=unresolved
 	if nMethodFuns gt 0 then method_funs = functions[iFunMethod]  else method_funs = ''
 	if nPros       gt 0 then procedures  = procedures[iPro]       else procedures  = ''
 	if nFuns       gt 0 then functions   = functions[iFun]        else functions   = ''
+	if nClass      eq 0 then classes     = ''
 
 	;Find class definitions
 	iClassDef = where( ( strpos(procedures, '__DEFINE') ne -1 ), nMethodPros, COMPLEMENT=iPro, NCOMPLEMENT=nPros)
@@ -331,20 +347,40 @@ UNRESOLVED=unresolved
 		files_class = strarr(nClass)
 		for i = 0, nClass - 1 do files_class[i] = file_which(strlowcase(classes[i]) + '__define.pro')
 		if nClass eq 1 then files_class = files_class[0]
+
+		;Remove empty results
+		;   - If two objects are contained in the same file, the function that
+		;     does not share a name with the module will result in the empty string
+		iGood = where(files_class ne '', nClass)
+		files_class = nClass eq 0 ? '' : files_class[iGood]
 	endif
 
 	;Functions
 	if get_files_fun && nFuns gt 0 then begin
+		;Find the files
 		files_fun = strarr(nFuns)
 		for i = 0, nFuns - 1 do files_fun[i] = file_which(strlowcase(functions[i]) + '.pro')
 		if nFuns eq 1 then file_fun = file_fun[0]
+
+		;Remove empty results
+		;   - If two functions are contained in the same file, the function that
+		;     does not share a name with the module will result in the empty string
+		iGood = where(files_fun ne '', nFuns)
+		files_fun = nFuns eq 0 ? '' : files_fun[iGood]
 	endif
 
 	;Procedures
 	if get_files_pro && nPros gt 0 then begin
+		;Find the files
 		files_pro = strarr(nPros)
 		for i = 0, nPros - 1 do files_pro[i] = file_which(strlowcase(procedures[i]) + '.pro')
 		if nPros eq 1 then file_pro = file_pro[0]
+		
+		;Remove empty results
+		;   - If two procedures are contained in the same file, the function that
+		;     does not share a name with the module will result in the empty string
+		iGood = where(files_pro ne '', nPros)
+		files_pro = nPros eq 0 ? '' : files_pro[iGood]
 	endif
 
 ;-----------------------------------------------------

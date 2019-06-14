@@ -417,6 +417,7 @@ end
 ;-
 function MrPolarization, data, nfft, dt, nshift, $
 COHERENCY = coherency, $
+DF = df, $
 DIMENSION = dimension, $
 ELLIPTICITY = ellipticity, $
 FILLVAL = fillval, $
@@ -507,18 +508,34 @@ _REF_EXTRA = extra
 ;I. Take the FFT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
     ;Compute the FFT of the data
-    fft_data = MrFFT2( temporary(temp_data), dt, $
-                       DIMENSION    = dimension, $
-                       T0           = t0, $
-                       TIME         = time, $
-                       FILLVAL      = theFillVal, $
-                       FREQUENCIES  = frequencies, $
-                       INTERP_PCT   = interp_pct, $
-                       NFFT         = nfft, $
-                       NSHIFT       = nshift, $
-                      _STRICT_EXTRA = extra )
+    fft_data = MrFFT2(temporary(temp_data), dt, $
+                      DF           = df, $
+                      DIMENSION    = dimension, $
+                      T0           = t0, $
+                      TIME         = time, $
+                      FILLVAL      = theFillVal, $
+                      FREQUENCIES  = frequencies, $
+                      INTERP_PCT   = interp_pct, $
+                      NFFT         = nfft, $
+                      NSHIFT       = nshift, $
+                     _STRICT_EXTRA = extra)
     
-    ;Dimensions
+    ;Which frequency components will be kept?
+;    if_keep = where(frequencies gt 0)
+;    fft_data = fft_data[*,if_keep,*]
+    fft_data    = fft_data[*, 0:nfft/2, *]
+    frequencies = frequencies[*,0:nfft/2]
+
+    ;Keep the time?
+    if ~arg_present(df)          then undefine, df
+    if ~arg_present(frequencies) then undefine, frequencies
+    if ~arg_present(time)        then undefine, time
+        
+    ;Keep the actual frequencies?
+;    if arg_present(frequencies) eq 1 $
+;        then frequencies = frequencies[if_keep] $
+;        else undefine, frequencies
+
     data_size = size(fft_data, /DIMENSIONS)
     npts      = data_size[0]
     nfreqs    = data_size[1]
@@ -607,7 +624,11 @@ _REF_EXTRA = extra
         if keep_kvec then begin
             k_hat = MrPolarization_Means(J_prime, ipol, ilin, npol, nlin, K_VEC=k_vec)
             k_vec = reform(k_vec, npts, nfreqs, 3)
+<<<<<<< HEAD
             k_vec = k_vec[*, ifrange[0]:ifrange[1], *]
+=======
+;            k_vec = k_vec[*, if_keep, *]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
             
         endif else k_hat = MrPolarization_Means(J_prime, ipol, ilin, npol, nlin)
     
@@ -762,13 +783,19 @@ _REF_EXTRA = extra
     endfor
     undefine, J
 
+    ;Trim frequencies being kept
+    if0 = nfavg_half
+    if1 = nfreqs-nfavg_half-1
+    if arg_present(frequencies) then frequencies = frequencies[*,if0:if1]
+    
     ;Truncate the end points that were not included in the average over frequencies.
     ;ipol may not contain all of the indices, so must search for them.
     temp_arr = lindgen(npts, nfreqs)
-    temp_arr = temp_arr[*, nfavg_half:nfreqs-nfavg_half-1]
+    temp_arr = temp_arr[*, if0:if1]
     void     = MrIsMember(temp_arr, iPol, these_iPol)
     iPol     = iPol[these_iPol]
     undefine, temp_arr
+<<<<<<< HEAD
     
     ;Trim frequencies being kept
     ifrange = [nfavg_half, (nfreqs/2)-nfavg_half-1]
@@ -777,21 +804,34 @@ _REF_EXTRA = extra
             then frequencies = frequencies[*, ifrange[0]:ifrange[1]] $
             else frequencies = frequencies[ifrange[0]:ifrange[1]]
     endif
+=======
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
 
 ;-----------------------------------------------------
 ;VI. What to Keep? \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
     ;Keep the spectral matrix?
+<<<<<<< HEAD
     if keep_spectral_matrix then spectral_matrix = J_prime[*,ifrange[0]:ifrange[1],*,*]
+=======
+    if keep_spectral_matrix then spectral_matrix = J_prime[*,if0:if1,*,*]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     undefine, J_prime
 
     ;Keep k_hat?
     if keep_khat eq 0 $
         then undefine, k_hat $
+<<<<<<< HEAD
         else k_hat = k_hat[*,ifrange[0]:ifrange[1],*]
     
     ;Keep the angle between k_hat and B?
     if keep_kdotb_angle then kdotb_angle = acos(k_dot_b[*,ifrange[0]:ifrange[1]])
+=======
+        else k_hat = k_hat[*,if0:if1,*]
+    
+    ;Keep the angle between k_hat and B?
+    if keep_kdotb_angle then kdotb_angle = acos(k_dot_b[*,if0:if1])
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
 
     undefine, k_dot_b
 
@@ -839,7 +879,11 @@ _REF_EXTRA = extra
     if nPol gt 0 then pzation[iPol] = sqrt( 1 - ((4*det_Js[iPol]) / real_part(Js[iPol,0,0] + Js[iPol,1,1])^2) )
     if nLin gt 0 then pzation[iLin] = !values.f_nan
     pzation = reform(pzation, npts, nfreqs)
+<<<<<<< HEAD
     pzation = pzation[*, ifrange[0]:ifrange[1]]
+=======
+    pzation = pzation[*, if0:if1]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
 
     ;B) Coherency
     if keep_coherency then begin
@@ -849,7 +893,11 @@ _REF_EXTRA = extra
                                                   real_part(Js[iPol,0,0]*Js[iPol,1,1]) )
         if nLin gt 0 then coherency[iLin] = !values.f_nan
         coherency = reform(coherency, npts, nfreqs)
+<<<<<<< HEAD
         coherency = coherency[*, ifrange[0]:ifrange[1]]
+=======
+        coherency = coherency[*, if0:if1]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     endif
     
     ;C) Angle of Polarization
@@ -866,9 +914,13 @@ _REF_EXTRA = extra
 
         if nLin gt 0 then polarization_angle[iLin] = !values.f_nan
         polarization_angle = reform(polarization_angle, npts, nfreqs)
+<<<<<<< HEAD
         polarization_angle = polarization_angle[*, ifrange[0]:ifrange[1]]
+=======
+        polarization_angle = polarization_angle[*, if0:if1]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     endif
-    
+
     ;D) Ellipticity
     ;       +1 is left-hand polarized
     ;       -1 is right-hand polarized
@@ -892,7 +944,11 @@ _REF_EXTRA = extra
         endif
         if nLin gt 0 then ellipticity[iLin] = !values.f_nan
         ellipticity = reform(ellipticity, npts, nfreqs)
+<<<<<<< HEAD
         ellipticity = ellipticity[*, ifrange[0]:ifrange[1]]
+=======
+        ellipticity = ellipticity[*, if0:if1]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     endif
 
 ;-----------------------------------------------------
@@ -905,14 +961,22 @@ _REF_EXTRA = extra
         ;   Because the diagonal terms are purely real (within ~1e-8), I explicitly take
         ;   the real part to prevent INTENSITY from being converted to a complex array.
         intensity = real_part(reform(Js[*,0,0] + Js[*,1,1], npts, nfreqs))
+<<<<<<< HEAD
         intensity = intensity[*, ifrange[0]:ifrange[1]]
+=======
+        intensity = intensity[*, if0:if1]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     endif
     
     ;Power Spectral Matrix in the Wave Normal Frame.
     if keep_wave_normal then begin
 ;        wave_normal_matrix = reform(Js[0:1,0:1,*], 2, 2, npts, nfreqs)
         wave_normal_matrix = reform(Js, npts, nfreqs, 3, 3)
+<<<<<<< HEAD
         wave_normal_matrix = wave_normal_matrix[*, ifrange[0]:ifrange[1], *, *]
+=======
+        wave_normal_matrix = wave_normal_matrix[*, if0:if1, *, *]
+>>>>>>> 0bf239305443e1544b686c13961a460ff9e44eab
     endif
 
 ;-----------------------------------------------------

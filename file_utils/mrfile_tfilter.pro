@@ -34,7 +34,13 @@
 ;
 ; PURPOSE:
 ;+
-;   Filter files by their time stamps
+;   Filter files by their time stamps.
+;
+;   Times within file names (as specified by FPATTERN) as well as the start and end times
+;   of the data interval (TSTART and TEND as specified by TPATTERN) must be convertible
+;   to ISO-8601 format by MrTimeParser (i.e. converted to '%Y-%M-%dT%H:%m:%S'). Once
+;   all times are in the same format, they are converted to Julian days and compared.
+;
 ;
 ; :Params:
 ;       FILES:          in, required, type=string/strarr
@@ -70,25 +76,14 @@
 ;       FPATTERN:       in, optional, type=string, default='%Y%M%d%H%m%S'
 ;                       A pattern recognized by MrTokens that represents how time
 ;                           is incorporated into the file names.
-;                       Filtering files by time with `TSTART` and `TEND` is
-;                           done by converting dates to integers and performing
-;                           math operations. As such, the times in FILENAME and
-;                           in `TSTART` and `TEND` must be converted into a
-;                           format where the slowest (fastest) changing time
-;                           element is to the left (right). If `FILE_PATH`, `TSTART`
-;                           and `TEND` are not already in such a format, set this
-;                           parameter to a token pattern recognized by
-;                           MrTimeParser so that they can be rearranged.
 ;       TPATTERN:       in, optional, type=string, default='%Y-%M-%dT%H:%m:%S'
 ;                       If `TSTART` and `TEND` are not ISO-8601 format, then
-;                           use this parameter to specify their token pattern.
-;                           Note that this pattern must be able to be broken down
-;                           into `TIMEORDER`.
+;                           use this parameter to specify their MrTokens pattern.
 ; 
 ;
 ; :Returns:
-;       FILES:          Fully qualified path to the files or directories that match
-;                           `PATTERN`.
+;       FILE_FILT:      out, required, type=string/strarr
+;                       Those elements of `FILES` that pass the time filter.
 ;
 ; :Author:
 ;   Matthew Argall::
@@ -101,87 +96,119 @@
 ; :History:
 ;   Modification History::
 ;       2016-02-24  -   Written by Matthew Argall
+;       2017-01-16  -   Convert times to Julian days when comparing. - MRA
 ;-
-function MrFile_VFilter, files, tstart, tend, $
+FUNCTION MrFile_TFilter, files, tstart, tend, $
 CLOSEST=closest, $
 COUNT=count, $
 FPATTERN=fpattern, $
-TPATTERN=tpattern, $
-	compile_opt idl2
-	on_error, 2
+TPATTERN=tpattern
+	Compile_Opt idl2
+	On_Error, 2
 	
 	;Defaults
-	tf_closest = keyword_set(closest)
-	if n_elements(tstart)    eq 0 then tstart    = ''
-	if n_elements(tend)      eq 0 then tend      = ''
-	if n_elements(timeOrder) eq 0 then timeOrder = '%Y%M%d%H%m%S'
-	if n_elements(tpattern)  eq 0 then tpattern  = '%Y-%M-%dT%H:%m:%S'
+	tf_closest = Keyword_Set(closest)
+	IF N_Elements(tstart)    EQ 0 THEN tstart    = ''
+	IF N_Elements(tend)      EQ 0 THEN tend      = ''
+	IF N_Elements(fpattern)  EQ 0 THEN fpattern  = '%Y%M%d%H%m%S'
+	IF N_Elements(tpattern)  EQ 0 THEN tpattern  = '%Y-%M-%dT%H:%m:%S'
+	outPattern = '%Y-%M-%dT%H:%m:%S'
 	
 	;Restrictions
-	if tstart eq '' || tend eq '' then message, 'At least one of TSTART or TEND must be given.'
+	IF tstart EQ '' && tend EQ '' THEN BEGIN
+		count = N_Elements(files)
+		RETURN, files
+	ENDIF
+	IF ~array_equal(MrTokens_IsMatch(files[0], fpattern), 1) THEN Message, 'FILES must match FPATTERN.'
+	IF tstart NE '' && ~MrTokens_IsMatch(tstart, tpattern)   THEN Message, 'TSTART must match TPATTERN.'
+	IF tend   NE '' && ~MrTokens_IsMatch(tend,   tpattern)   THEN Message, 'TEND must match TPATTERN.'
 	
 	;Results
-	file_filt = file_basename(files)
-	dir_filt  = file_dirname(files)
-	count     = n_elements(files)
+	file_filt = File_BaseName(files)
+	dir_filt  = File_DirName(files)
+	count     = N_Elements(files)
 	
 	;How to filter
-	tf_tstart = tstart ne ''
-	tf_tend   = tend   ne ''
+	tf_tstart = tstart NE ''
+	tf_tend   = tend   NE ''
 	
 ;-------------------------------------------
-; Find Start and End Times in File Names ///
+; Find File Start & End Times //////////////
 ;-------------------------------------------
 	;
 	; Does the file name include TStart and TEnd?
 	;   - Assume TEnd takes the same form as TStart.
 	;   - Assume TStart does not repeat tokens.
-	;   - Filenames include TStart and TEnd if the first token of TStart is repeated.
+	;   - Filenames include TStart and TEnd IF the first token OF TStart is repeated.
 	;
 	; Times are put into TimeOrder and converted to integers. This allows
 	; for easy comparison. 
 	;
 
 	;Extract tokens
-	tokens = MrTokens_Extract(inFile, COUNT=nTokens, POSITIONS=token_pos)
+	tokens = MrTokens_Extract(fpattern, COUNT=nTokens, POSITIONS=token_pos)
 	
 	;Is there an end time in the file name?
 	;   - Look for a repeated token
 	;   - Repeated token will be found at position TOKEN_POS[0]+2+IREPEAT
-	iRepeat = strpos( strmid(inFile, token_pos[0]+2), '%'+tokens[0] )
-	tf_fend = iRepeat ne -1
+	iRepeat = strpos( strmid(fpattern, token_pos[0]+2), '%'+tokens[0] )
+	tf_fend = iRepeat NE -1
 
 	;Convert the start time of each file to an integer
 	;  - MrTimeParser will take the last match (i.e. FEND)
-	;  - If the file name has an end time, parse up to the first repeated token.
-	if tf_fend $
-		then MrTimeParser, filesFound, strmid(inFile, 0, iRepeat+2+token_pos[0]), timeOrder, fstart $
-		else MrTimeParser, filesFound, inFile, timeOrder, fstart
-	ifstart = long64(fstart)
+	;  - If the file name has an END time, parse up to the first repeated token.
+	IF tf_fend $
+		THEN MrTimeParser, file_filt, strmid(fpattern, 0, iRepeat+2+token_pos[0]), outPattern, fstart $
+		ELSE MrTimeParser, file_filt, fpattern, tpattern, fstart
 
-	;Convert the end time to an integer
-	if tf_fend then begin
-		MrTimeParser, filesFound, strmid(inFile, iRepeat+token_pos[0]+2), timeOrder, fend
-		ifend = long64(fend)
-	endif
+	;Convert the END time to an integer
+	IF tf_fend THEN BEGIN
+		MrTimeParser, file_filt, strmid(fpattern, iRepeat+token_pos[0]+2), outPattern, fend
+	ENDIF
+	
+;-------------------------------------------
+; Convert to Julian Dates //////////////////
+;-------------------------------------------
+	;File times
+	
+	;Start
+	MrTimeParser_Breakdown, Temporary(fstart), outPattern, $
+	                        YEAR=yr, MONTH=mo, DAY=day, HOUR=hr, MINUTE=mnt, SECOND=sec
+	fs_jul = JulDay( Temporary(mo), Temporary(day), Temporary(yr), Temporary(hr), Temporary(mnt), Temporary(sec) )
+	
+	;End
+	IF tf_fend THEN BEGIN
+		MrTimeParser_Breakdown, Temporary(fend), outPattern, $
+		                        YEAR=yr, MONTH=mo, DAY=day, HOUR=hr, MINUTE=mnt, SECOND=sec
+		fe_jul = JulDay( Temporary(mo), Temporary(day), Temporary(yr), Temporary(hr), Temporary(mnt), Temporary(sec) )
+	ENDIF
+	
+	
+	;Time interval
+	temp_tstart = tstart
+	temp_tend   = tend
+	IF tpattern NE outpattern THEN BEGIN
+		IF tf_tstart THEN MrTimeParser, tstart, tpattern, outPattern, temp_tstart
+		IF tf_tend   THEN MrTimeParser, tend,   tpattern, outPattern, temp_tend
+	ENDIF
 		
-	;Convert input times to integers
-	if tf_tstart then begin
-		MrTimeParser, tstart, tpattern, timeOrder, temp_start
-		itstart = long64(temporary(temp_start))
-	endif
-	if tf_tend then begin
-		MrTimeParser, tend, tpattern, timeOrder, temp_tend
-		itend = long64(temporary(temp_tend))
-	endif
+	;Breakdown
+	MrTimeParser_Breakdown, Temporary(temp_tstart), outPattern, $
+	                        YEAR=syr, MONTH=smo, DAY=sday, HOUR=shr, MINUTE=smnt, SECOND=ssec
+	MrTimeParser_Breakdown, Temporary(temp_tend), outPattern, $
+	                        YEAR=eyr, MONTH=emo, DAY=eday, HOUR=ehr, MINUTE=emnt, SECOND=esec
+	
+	;Convert to Julian
+	ts_jul = JulDay( Temporary(smo), Temporary(sday), Temporary(syr), Temporary(shr), Temporary(smnt), Temporary(ssec) )
+	te_jul = JulDay( Temporary(emo), Temporary(eday), Temporary(eyr), Temporary(ehr), Temporary(emnt), Temporary(esec) )
 
 ;-------------------------------------------
-; Filename Includes End Time ///////////////
+; Filter by Time ///////////////////////////
 ;-------------------------------------------
 	;
 	; We decide which files to keep by first considering what happens when
 	; we have all information: tstart, tend, fStart, and fEnd. In this
-	; case, we want to choose any files that contain any portion of the
+	; CASE, we want to choose any files that contain any portion OF the
 	; time interval [tstart, tend]. 
 	;
 	;                    |----Time Interval----|
@@ -195,45 +222,45 @@ TPATTERN=tpattern, $
 	; If we have less information, we simply remove the clause containing
 	; the missing information.
 	;
-	if tf_fend then begin
-		case 1 of
-			(tf_tstart && tf_tend): ikeep = where( ( (itstart ge ifstart) and (itstart le ifend) ) or $
-			                                       ( (itend   ge ifstart) and (itend   le ifend) ), count )
-			tf_tstart:              ikeep = where( (itstart ge ifstart) and (itstart le ifend), count )
-			tf_tend:                ikeep = where( (itend   ge ifstart) and (itend   le ifend), count )
-		end
-
-;-------------------------------------------
-; Filename Does Not Include End Time ///////
-;-------------------------------------------
-	endif else begin
-		case 1 of
-			(tf_tstart && tf_tend): ikeep = where( (itstart ge ifstart) or (itend ge ifstart), count )
-			tf_tstart:              ikeep = where(itstart ge ifStart, count)
-			tf_tend:                ikeep = where(itend   ge ifStart, count)
-		end
-	endelse
 	
-	;Select the subset of files
-	if count gt 0 then begin
-		dirsFound  = dirsFound[ikeep]
-		filesFound = filesFound[ikeep]
-		fstart     = fstart[ikeep]
-		if tf_fend then fend = fend[ikeep]
-	endif else begin
-		dirsFound  = ''
-		filesFound = ''
-	endelse
+	;File name includes END times
+	IF tf_fend THEN BEGIN
+		CASE 1 OF
+			(tf_tstart && tf_tend): ikeep = Where( ( (ts_jul GE fs_jul) and (ts_jul LE fe_jul) ) or $
+			                                       ( (te_jul GE fs_jul) and (te_jul LE fe_jul) ), count )
+			tf_tstart:              ikeep = Where( (ts_jul GE fs_jul) and (ts_jul LE fe_jul), count )
+			tf_tend:                ikeep = Where( (te_jul GE fs_jul) and (te_jul LE fe_jul), count )
+		END
+		
+	;File name does not include END times
+	ENDIF ELSE BEGIN
+		CASE 1 OF
+			(tf_tstart && tf_tend): ikeep = Where( (ts_jul GE fs_jul) or (te_jul GE fs_jul), count )
+			tf_tstart:              ikeep = Where(ts_jul GE fs_jul, count)
+			tf_tend:                ikeep = Where(te_jul GE fs_jul, count)
+		END
+	ENDELSE
+	
+	;Select the subset OF files
+	IF count GT 0 THEN BEGIN
+		dir_filt  = dir_filt[ikeep]
+		file_filt = file_filt[ikeep]
+		fs_jul    = fs_jul[ikeep]
+		IF tf_fend THEN fe_jul = fe_jul[ikeep]
+	ENDIF ELSE BEGIN
+		dir_filt  = ''
+		file_filt = ''
+	ENDELSE
 
 ;-------------------------------------------
 ; Closest Time /////////////////////////////
 ;-------------------------------------------
 	;
 	; We want to find the closes time to 'TStart'
-	;   - If the file has both a start and end time, there is
+	;   - If the file has both a start and END time, there is
 	;     sufficient information to select the appropriate files.
 	;     We do not need to check anything.
-	;   - If only a start time exists in the file name, then the
+	;   - If only a start time exists in the file name, THEN the
 	;     selection process above may be too liberal. Find the
 	;     file that starts at or just before 'TStart'.
 	;   - If 'TEnd' was also given, find the file that starts
@@ -241,40 +268,50 @@ TPATTERN=tpattern, $
 	;     'TStart' and 'TEnd'. Otherwise, just pick the file
 	;     associated with 'TStart'.
 	;
-	if closest && ~tf_fend && count gt 0 then begin
+	IF tf_closest && ~tf_fend && count GT 0 THEN BEGIN
 		;
 		; Find the file that starts closest in time to TSTART
 		;
 
 		;Find the largest start time <= TSTART
-		istart = where(fstart le itstart, nstart)
-		if nstart eq 0 then begin
+		istart = Where(fs_jul LE ts_jul, nstart)
+		IF nstart EQ 0 THEN BEGIN
 			istart = 0
 			nstart = 1
-		endif
-		void   = max(fstart[istart], imax)
+		ENDIF
+		void   = max(fs_jul[istart], imax)
 		istart = istart[imax]
 		
-		;Find the smallest end time >= TEND
-		if tf_tend then begin
-			iend = where(fstart le itend, nend)
-			void = max(fstart[iend], imax)
+		;Find the smallest END time >= TEND
+		IF tf_tend THEN BEGIN
+			iend = Where(fs_jul LE te_jul, nend)
+			void = Max(fs_jul[iend], imax)
 			iend = iend[imax]
-		endif else begin
+		ENDIF ELSE BEGIN
 			iend = istart
 			nend = 0
-		endelse
+		ENDELSE
 
 		;Select the found files
-		if nstart + nend gt 0 then begin
-			if istart gt iend then message, 'TSTART must be before TEND.'
-			dirsFound  = dirsFound[istart:iend]
-			filesFound = filesFound[istart:iend]
-			count      = iend - istart + 1
-		endif else begin
-			dirsFound  = ''
-			filesFound = ''
-			count      = 0
-		endelse
-	endif
-end
+		IF nstart + nend GT 0 THEN BEGIN
+			IF istart GT iend THEN Message, 'TSTART must be before TEND.'
+			dir_filt  = dir_filt[istart:iend]
+			file_filt = file_filt[istart:iend]
+			count     = iend - istart + 1
+		ENDIF ELSE BEGIN
+			dir_filt  = ''
+			file_filt = ''
+			count     = 0
+		ENDELSE
+	ENDIF
+
+;-------------------------------------------
+; Finish Up ////////////////////////////////
+;-------------------------------------------
+	;Combine the directories and file names
+	FOR i = 0, count - 1 do file_filt[i] = FilePath(file_filt[i], ROOT_DIR=dir_filt[i])
+	
+	;Return scalar IF one result
+	IF i EQ 1 THEN file_filt = file_filt[0]
+	RETURN, file_filt
+END

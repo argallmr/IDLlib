@@ -1,8 +1,8 @@
 ; docformat = 'rst'
 ;
 ;+
-;   Compute the velocity of a relativistic particle with a given energy (does not
-;   account for massless particles).
+;   Compute the derivative of the velocity of a relativistic particle with a given energy
+;   (does not account for massless particles).
 ;
 ;   Starting with
 ;       E = m c^{2} ( \gamma - 1 )
@@ -13,17 +13,22 @@
 ;   Pulling m c^{2} out of the denominator and noting that the rest energe E0 = mc^2.
 ;       v = c sqrt{ 1 - \left( \frac{ E_{0} } { E_{0} + E } \right)^{2} }
 ;
+;   Compute the derivative
+;       dv = \frac{ 2 c E_{0}^{2} } { E_{0} + E }^{3} dE
+;
 ; :Categories:
 ;   Plasma Physics Utilties
 ;
 ; :Params:
 ;       E:                  in, required, type=fltarr
 ;                           Kinetic energy of the particle in electron volts (eV)
+;       DE:                 in, required, type=fltarr
+;                           Derivative of `E` of the particle in electron volts (eV)
 ;       M:                  in, required, type=float
 ;                           The mass of a particle species in kilograms (Kg).
 ;
 ; :Returns:
-;       V:                  Velocity of the particle. (km/s)
+;       DV:                 Derivative of the velocity of the particle. (km/s)
 ;
 ; :Author:
 ;   Matthew Argall::
@@ -35,23 +40,21 @@
 ;
 ; :History:
 ;   Modification History::
-;       2015/10/31  -   Written by Matthew Argall
-;       2016/03/12  -   Velocity is returned with units of km/s. - MRA
+;       2017/01/03  -   Written by Matthew Argall
 ;-
-function mrrel_velocity, E, m
-	compile_opt strictarr
-	on_error, 2
+FUNCTION mrrel_dv, E, dE, m
+	Compile_Opt strictarr
+	On_Error, 2
 
 	;Compute the gamma factor
-	c    = constants('c')
-	eV2J = 1.602176565e-19  ;converts eV to Joules
-	E_J  = E * eV2J
+	c    = MrConstants('c')
+	J2eV = MrConstants('J2eV')
 
 	;Rest mass
-	E0 = m * c^2
-
+	E0 = J2eV * m * c^2
+	
 	;Relativistic velocity
-	v = c * sqrt( 1.0 - ( E0 / (E_J + E0) )^2 )
+	dv = 2 * c * E0^2 * dE / (E0 + E)^3
 
-	return, v * 1e-3
-end
+	RETURN, dv * 1e-3
+END

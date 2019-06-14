@@ -63,6 +63,7 @@
 ;       2013-11-01  -   Added the EDGE_TRUNCATE and _REF_EXTRA keywords. - MRA
 ;       2013-11-29  -   The z-axis of the FA-system always points toward +z in the
 ;                           old system. Update library programs. - MRA
+;       2017-11-22  -   Do not flip the z-axis if Bz < 0. FAS is ALWAYS along the field - MRA
 ;-
 function fa_system, data, navg, $
 AVG_DATA = avg_data, $
@@ -91,8 +92,6 @@ _REF_EXTRA=extra
 
     ;The z-axis will be along the average field direction
     z_hat = MrVector_Normalize(avg_data)
-    iflip = where(z_hat[2,*] lt 0, nflip)
-    if nflip gt 0 then z_hat[*,iflip] = -z_hat[*,iflip]
 
     ;Since many common coordinate systems (e.g. GSE, GSM) are defined with the x-axis
     ;pointing towards the sun, we will find the x-axis by crossing [0, 1, 0] with Z_HAT.

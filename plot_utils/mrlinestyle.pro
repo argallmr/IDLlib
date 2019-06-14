@@ -90,6 +90,9 @@ NAMES=names
 		            ['None',             ' ']]
 		return, theNames
 	endif
+	
+	nStyles = n_elements(linestyle)
+	style   = intarr(nStyles)
 
 	;Was a symbol used for the linestyle?
 	if size(linestyle, /TNAME) eq 'STRING' then begin
@@ -97,32 +100,32 @@ NAMES=names
 		upStyle = strupcase(linestyle)
 		
 		;Convert short name to long name
-		case upStyle of
-			'-':  upStyle = 'SOLID_LINE'
-			'.':  upStyle = 'DOT'
-			'--': upStyle = 'DASH'
-			'-.': upStyle = 'DASH_DOT'
-			'-:': upStyle = 'DASH_DOT_DOT_DOT'
-			'__': upStyle = 'LONG_DASH'
-			' ':  upStyle = 'NONE'
-			else: ;Long name was given already.
-		endcase
-		
-		;Set the line style
-		case upStyle of
-			'SOLID_LINE':       style = 0
-			'DOT':              style = 1
-			'DASH':             style = 2
-			'DASH_DOT':         style = 3
-			'DASH_DOT_DOT_DOT': style = 4
-			'LOG_DASH':         style = 5
-			'NONE':             style = 6
-			else: message, 'Symbol name "' + linestyle + '" not recognized.'
-		endcase
+		for i = 0, nStyles - 1 do begin
+			;Set the line style
+			case upStyle[i] of
+				'SOLID_LINE':       style[i] = 0
+				'-':                style[i] = 0
+				'DOT':              style[i] = 1
+				'.':                style[i] = 1
+				'DASH':             style[i] = 2
+				'--':               style[i] = 2
+				'DASH_DOT':         style[i] = 3
+				'-.':               style[i] = 3
+				'DASH_DOT_DOT':     style[i] = 4
+				'DASH_DOT_DOT_DOT': style[i] = 4
+				'-:':               style[i] = 4
+				'LOG_DASH':         style[i] = 5
+				'__':               style[i] = 5
+				'NONE':             style[i] = 6
+				' ':                style[i] = 6
+				else: message, 'Symbol name "' + linestyle[i] + '" not recognized.'
+			endcase
+		endfor
 	endif else style = linestyle
 
 	;Valid linestyle?
-	if style lt 0 || style gt 6 then message, 'LINESTYLE is out of range.'
-
+	if ~Array_Equal(style ge 0 || style le 6, 1) then message, 'LINESTYLE is out of range.'
+	
+	if nStyles eq 1 then style = style[0]
 	return, style
 end

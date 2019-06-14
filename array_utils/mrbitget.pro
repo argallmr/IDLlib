@@ -14,8 +14,10 @@
 ; :Params:
 ;       A:          in, required, type=numeric
 ;                   Array for which bits are get.
-;       BIT:        in, required, type=integer
-;                   Bit to get
+;       BIT:        in, optional, type=integer, default=reverse(bindgen(maxbit)+1B)
+;                   Bit to get. If not provided and `A` is scalar, the state of all
+;                       possible bits for the given datatype will be returned, starting
+;                       at bit N and decreasing to bit 1.
 ;
 ; :Keywords:
 ;       TYPE:       in, required, type=string/integer
@@ -38,6 +40,7 @@
 ; :History:
 ;    Modification History::
 ;       2016/09/13  -   Written by Matthew Argall
+;       2017/04/03  -   If `A` is scalar, then `BIT` can be undefined. - MRA
 ;-
 function MrBitGet, A, bit, $
 TYPE=type
@@ -92,6 +95,9 @@ TYPE=type
 		'ULONG64':  maxBit = 64
 		else: message, 'Datatype unknown: "' + type + '.'
 	endcase
+	
+	;Default to checking all bits
+	if nA eq 1 && nBits eq 0 then bit = reverse(bindgen(maxBit)+1B)
 	
 	;Check valid bit value
 	if ~array_equal(bit gt 0 and bit le maxBit, 1) $

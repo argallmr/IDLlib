@@ -91,7 +91,7 @@ function MrFile_VersionCompare, file1, file2, regex
 		message, 'FILE1 and FILE2 must have the same number of elements.'
 
 	;Default regex for finding file version parts
-	if n_elements(regex) eq 0 then regex = '([0-0]+)\.([0-9]+)\.([0-9]+)'
+	if n_elements(regex) eq 0 then regex = '([0-9]+)\.([0-9]+)\.([0-9]+)'
 
 	;Find the file version
 	vfile1 = fix( (stregex( file1, regex, /SUBEXP, /EXTRACT))[1:*,*] )

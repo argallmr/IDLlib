@@ -5,7 +5,7 @@
 ;
 ; PURPOSE:
 ;+
-;   Set the value of a particular bit (e.g., 1=on, 0=off).
+;   Set the value of a particular bit (e.g., 1=on, 0=off). Note that Bit 1 is 2^0.
 ;
 ; :Params:
 ;       A:          in, required, type=numeric
@@ -36,6 +36,7 @@
 ; :History:
 ;    Modification History::
 ;       2016/09/13  -   Written by Matthew Argall
+;       2017/04/03  -   Handle case when A is scalar and BIT is an array. - MRA
 ;-
 function MrBitSet, A, bit, V, $
 TYPE=type
@@ -56,7 +57,7 @@ TYPE=type
 	if nA    gt 1 && nA    ne N then message, 'A has an incorrect number of elements.'
 	if nBits gt 1 && nBits ne N then message, 'BITS has an incorrect number of elements.'
 	if nV    gt 1 && nV    ne N then message, 'V has an incorrect number of elements.'
-	
+
 	;Make sure we have scalars
 	if nBits eq 1 then bit = bit[0]
 	if nV    eq 1 then V   = V[0]
@@ -106,6 +107,7 @@ TYPE=type
 
 	;Set the proper bit
 	result = A + 2^(bit-1) * tf_set - 2^(bit-1) * tf_unset
+	if nA eq 1 && nBits gt 1 then result = total(result, /PRESERVE_TYPE)
 
 	;Return
 	return, result
