@@ -43,7 +43,7 @@ function inertial_length, n, particle
 	;compute the inertial length
 	;   - Multiply by 1e-3 for m -> km
 	omega_p = w_plasma(n, particle)
-	lambda = ( 1e-3 * constants('c') * 2 * !pi ) / omega_p
+	lambda = ( 1e-3 * constants('c') ) / omega_p
 	
 	return, lambda
 end

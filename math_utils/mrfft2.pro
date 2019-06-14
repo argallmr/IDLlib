@@ -84,6 +84,10 @@
 ;       DT_PLUS:            out, optional, type=float
 ;                           A named variable to receive the upper-limit on each time stamp
 ;                               in `TIME`.
+;       DT_TOL:             in, optional, type=float, default=0.1
+;                           A number in the range of [0,1] indicating the tolerance on
+;                               the sampling interval that constitutes a data gap or shift
+;                               in sampling cadence.
 ;       FILLVAL:            in, optional, type=same as `DATA`
 ;                           A value that represents bad points within `DATA`. They will
 ;                               be converted to NaNs before the FFT is performed, unless
@@ -159,6 +163,7 @@ DIMENSION = dimension, $
 DOUBLE = double, $
 DT_MEDIAN = dt_median, $
 DT_PLUS = dt_plus, $
+DT_TOL = dt_tol, $
 FILLVAL = fillval, $
 FMIN = fmin, $
 FMAX = fmax, $
@@ -203,6 +208,7 @@ WINDOW = window
 	tf_double   = n_elements(double)  eq 0 ? (type eq 'DOUBLE') : keyword_set(double)
 	tf_frange   = n_elements(fmin)    gt 0 || n_elements(fmax) gt 0
 	nfft        = n_elements(nfft_in) eq 0 ? (n1 - (n1 mod 2)) : nfft_in
+	if n_elements(dt_tol)     eq 0 then dt_tol     = 0.1
 	if n_elements(interp_pct) eq 0 then interp_pct = 0.0
 	if n_elements(nshift)     eq 0 then nshift     = floor(nfft/2)
 
@@ -292,9 +298,19 @@ WINDOW = window
 			;   - A "bad" sampling interval occurs if it is 10% different
 			;     from the first sampling interval
 			SI   = median(delta_t)
-			ibad = total( abs(temporary(delta_t) - SI) gt 0.1*SI )
+			ibad = total( abs(temporary(delta_t) - SI) gt dt_tol*SI )
 			if ibad ne 0 then begin
 				message, 'Sampling interval changes during FFT. Skipping.', /INFORMATIONAL
+				
+				;Skip to next interval
+				if i lt n_int-2 then begin
+					istart += nshift
+					iend += nshift
+				endif else begin
+					ilast = iend
+					iend = n1 - 1
+					istart = n1 - nfft
+				endelse
 				continue
 			endif
 		endif
@@ -305,7 +321,7 @@ WINDOW = window
 		;Determine frequencies
 		if tf_calc_dt || i eq 0 then begin
 			ftemp = fft_freqs(nfft, SI, FNYQUIST=fN, INYQUIST=ifN)
-
+			
 			;Default frequency range
 			f_min = n_elements(fmin) eq 0 ? ftemp[0]   : fmin
 			f_max = n_elements(fmax) eq 0 ? ftemp[ifN] : fmax
@@ -375,7 +391,7 @@ WINDOW = window
 			ftemp     = ftemp[if_out]
 			nf_tot   >= nf_out
 		endif
-
+		
 	;-----------------------------------------------------
 	; Outputs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	;-----------------------------------------------------
@@ -393,7 +409,11 @@ WINDOW = window
 		df[i]               = 1.0 / (nfft * SI)
 		
 		;Time stamp
-		if tf_time then time[i] = (i eq 0) ? t0 : time[i-1] + nshift*dt_median[i-1]
+		if tf_time then begin
+			if tf_calc_dt $
+				then time[i] = (dt[iend] + dt[istart]) / 2.0 $
+				else time[i] = (i eq 0) ? t0 : time[i-1] + nshift*dt_median[i-1]
+		endif
 
 	;-----------------------------------------------------
 	; Next Interval \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -411,7 +431,7 @@ WINDOW = window
 			istart = n1 - nfft
 		endelse
 	endfor
-
+	
 ;-----------------------------------------------------
 ; Finishing Touches \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
@@ -433,17 +453,19 @@ WINDOW = window
 	;   - NFFT is constant, but DT is permitted to vary
 	;   - If DT changes, then we must keep track of FN as a function of time
 	;   - If not, then FN and F do not vary with time, and we can reduce to one copy
-	if ~tf_calc_dt || total( (dt_median - dt_median[0]) gt 0.1*dt_median[0] ) eq 0 then begin
-		freqs     = reform(freqs[0,*])
-		df        = df[0]
-		dt_median = dt_median[0]
-		dt_plus   = dt_plus[0]
+	iGood = where(dt_median ne 0, nGood)
+	if nGood GT 0 && (~tf_calc_dt || total( abs(dt_median[iGood] - dt_median[iGood[0]]) gt dt_tol*dt_median[iGood[0]] ) eq 0) then begin
+		freqs     = freqs[iGood[0],*]
+		df        = df[iGood[0]]
+		dt_median = dt_median[iGood[0]]
+		dt_plus   = dt_plus[iGood[0]]
 	endif
 
 	;Remove extra frequencies
 	if nf_tot gt 0 then begin
-		d_fft = d_fft[0:nf_tot-1, *, *]
-		freqs = freqs[0:nf_tot-1, *]
+		d_fft = d_fft[*, 0:nf_tot-1, *]
+		freqs = freqs[*, 0:nf_tot-1]
+		df    = df[0:nf_tot-1]
 	endif
 	
 	;Center times

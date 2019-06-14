@@ -417,6 +417,7 @@ end
 ;-
 function MrPolarization, data, nfft, dt, nshift, $
 COHERENCY = coherency, $
+DF = df, $
 DIMENSION = dimension, $
 ELLIPTICITY = ellipticity, $
 FILLVAL = fillval, $
@@ -508,6 +509,7 @@ _REF_EXTRA = extra
 ;-----------------------------------------------------
     ;Compute the FFT of the data
     fft_data = MrFFT2(temporary(temp_data), dt, $
+                      DF           = df, $
                       DIMENSION    = dimension, $
                       T0           = t0, $
                       TIME         = time, $
@@ -519,16 +521,20 @@ _REF_EXTRA = extra
                      _STRICT_EXTRA = extra)
     
     ;Which frequency components will be kept?
-    if_keep = where(frequencies gt 0)
-    fft_data = fft_data[*,if_keep,*]
+;    if_keep = where(frequencies gt 0)
+;    fft_data = fft_data[*,if_keep,*]
+    fft_data    = fft_data[*, 0:nfft/2, *]
+    frequencies = frequencies[*,0:nfft/2]
 
     ;Keep the time?
-    if arg_present(time) eq 0 then undefine, time
+    if ~arg_present(df)          then undefine, df
+    if ~arg_present(frequencies) then undefine, frequencies
+    if ~arg_present(time)        then undefine, time
         
     ;Keep the actual frequencies?
-    if arg_present(frequencies) eq 1 $
-        then frequencies = frequencies[if_keep] $
-        else undefine, frequencies
+;    if arg_present(frequencies) eq 1 $
+;        then frequencies = frequencies[if_keep] $
+;        else undefine, frequencies
 
     data_size = size(fft_data, /DIMENSIONS)
     npts      = data_size[0]
@@ -763,7 +769,7 @@ _REF_EXTRA = extra
     ;Trim frequencies being kept
     if0 = nfavg_half
     if1 = nfreqs-nfavg_half-1
-    if arg_present(frequencies) then frequencies = frequencies[if0:if1]
+    if arg_present(frequencies) then frequencies = frequencies[*,if0:if1]
     
     ;Truncate the end points that were not included in the average over frequencies.
     ;ipol may not contain all of the indices, so must search for them.

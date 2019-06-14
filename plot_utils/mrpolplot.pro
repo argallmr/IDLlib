@@ -170,7 +170,11 @@ _REF_EXTRA = extra
     if n_elements(background) gt 0 $
         then iMissing = where(intensity_data le background, nMissing) $
         else nMissing = 0
-
+     
+    if n_elements(df) gt 1 then begin
+        fdims = size(frequencies, /DIMENSIONS)
+        df    = rebin(df, fdims)
+    endif
 ;-----------------------------------------------------
 ;INTENSITY \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
@@ -183,7 +187,7 @@ _REF_EXTRA = extra
                            /LOG, $
                            /NAN, $
                            /SCALE, $
-                           CTINDEX       = 13, $
+                           RGB_TABLE     = 13, $
                            NAME          = 'Intensity', $
                            MISSING_COLOR = 'Antique White', $
                            RANGE         = range, $

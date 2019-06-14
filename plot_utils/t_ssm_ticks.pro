@@ -87,10 +87,10 @@ FUNCTION t_ssm_ticks, ax, index, values
 			(minute-cMinute)   GT 0: str = String(second, decimal*10, hour, minute, FORMAT='(%"%02i.%1i!C%02i:%02i")')
 			(second-cSecond)   GT 0: str = String(second, decimal*10, hour, minute, FORMAT='(%"%02i.%1i!C%02i:%02i")')
 			(decimal-cDecimal) GT 0: BEGIN
-				pow    = Fix(ALog10(decimal - cDecimal))
+				pow    = Round(ALog10(decimal - cDecimal))
 				dec    = Long(decimal * 10^Abs(pow))
 				str    = String(dec, FORMAT='(%".%0' + String(Abs(pow), FORMAT='(i0)') +'i")')
-				str   += '!C' + String(second, FORMAT='(%"!C%:%02i")')
+				str   += '!C' + String(second, FORMAT='(%":%02i")')
 			ENDCASE
 			ELSE: Message, 'Time range too small.'
 		ENDCASE
@@ -101,7 +101,7 @@ FUNCTION t_ssm_ticks, ax, index, values
 	cMinute  = minute
 	cSecond  = second
 	cDecimal = decimal
-	
+
 	;Return the tick label
 	RETURN, str
 END

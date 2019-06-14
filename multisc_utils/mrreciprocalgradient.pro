@@ -100,7 +100,7 @@ function MrReciprocalGradient, r1, r2, r3, r4, v1, v2, v3, v4
 	sz3 = size(v3)
 	sz4 = size(v4)
 	if (sz1[0] gt 2) || (sz1[0] eq 2 && (sz1[1] ne 1 && sz1[1] ne 3)) $
-		then message, 'V1 must be a scalar or vector field.'
+		then message, 'V1 must be a scalar (1xN) or vector (3xN) field.'
 	if sz2[1] ne sz1[1] || sz3[1] ne sz1[1] || sz4[1] ne sz1[1] $
 		then message, 'Inputs must be all scalar fields or all vector fields.'
 	if (sz1[0] eq 2) && (sz2[2] ne sz1[2] || sz3[2] ne sz1[2] || sz4[2] ne sz1[2]) $
