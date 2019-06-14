@@ -96,7 +96,7 @@ function curlometer, positions, fields
         R_ik = (*positions[vertex[0,surf]] - *positions[vertex[2,surf]]) * km_to_m
 
         ;mu_0 * J . (R_ij x R_ik) = (B_ij . R_ik) - (B_ik . R_ij)
-        rhs = dot_product(B_ij, R_ik) - dot_product(B_ik, B_ij)
+        rhs = dot_product(B_ij, R_ik) - dot_product(B_ik, R_ij)
         lhs = mu_0 * cross_product(R_ij, R_ik)
             
         ;for each component of the current density, J

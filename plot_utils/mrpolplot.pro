@@ -138,7 +138,7 @@ _REF_EXTRA = extra
     refresh_in = 1
     if current then begin
         polWin     = GetMrWindows(/CURRENT)
-        refresh_in = polWin.REFRESH
+        refresh_in = polWin -> GetRefresh()
         polWin    -> Refresh, /DISABLE
     endif else begin
         BUFFER = output_fname ne ''
@@ -152,7 +152,7 @@ _REF_EXTRA = extra
     ;Compute the spectrogram
     pzation_data = MrPolarization(data, nfft, dt, nshift, $
                                   DIMENSION   = dimension, $
-                                  DF          = df, $
+                                  DF          = df_plus, $
                                   DT_PLUS     = dt_plus, $
                                   FREQUENCIES = frequencies, $
                                   TIME        = time, $
@@ -161,7 +161,7 @@ _REF_EXTRA = extra
                                   KDOTB_ANGLE = kdotb_angle_data, $
                                   COHERENCY   = coherency_data, $
                                  _EXTRA       = extra)
-    
+
     ;Did an error occur?
     if pzation_data[0] eq -1 && n_elements(pzation_data) eq 1 $
         then return, obj_new()
@@ -174,16 +174,24 @@ _REF_EXTRA = extra
 ;-----------------------------------------------------
 ;INTENSITY \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ;-----------------------------------------------------
+    polDims = size(pzation_data, /DIMENSIONS)
+    nt      = polDims[0]
+    nf      = polDims[1]
+    
+    ;DF
+    ;   - Must be an array to Rebin
+    IF N_Elements(df_plus) GT 1 THEN df_plus = Rebin(df_plus, nt, nf)
+
     ;Check for the intensity
     if (intensity eq 1) then begin
         ;Create the image
-        IntImage = MrImage(intensity_data, time, frequencies, 0.0, df, dt_plus, df, $
+        IntImage = MrImage(intensity_data, time, frequencies, 0.0, 0.0, dt_plus, df_plus, $
                            /AXES, $
                            /CURRENT, $
                            /LOG, $
                            /NAN, $
                            /SCALE, $
-                           CTINDEX       = 13, $
+                           RGB_TABLE     = 13, $
                            NAME          = 'Intensity', $
                            MISSING_COLOR = 'Antique White', $
                            RANGE         = range, $
@@ -213,7 +221,7 @@ _REF_EXTRA = extra
         
         ;Reverse the Black->White colortable
         cgLoadCT, 0, RGB_TABLE=ctBW, /REVERSE
-        PolIm = MrImage(pzation_data, time, frequencies, 0.0, df, dt_plus, df, $
+        PolIm = MrImage(pzation_data, time, frequencies, 0.0, 0.0, dt_plus, df_plus, $
                         /AXES, $
                         /CURRENT, $
                         /NAN, $
@@ -254,7 +262,7 @@ _REF_EXTRA = extra
         palette = MrCreateCT(/RWB, /REVERSE)
 
         ;Create the image
-        EllIm = MrImage(ellipticity_data, time, frequencies, 0.0, df, dt_plus, df, $
+        EllIm = MrImage(ellipticity_data, time, frequencies, 0.0, 0.0, dt_plus, df_plus, $
                         /AXES, $
                         /CURRENT, $
                         /NAN, $
@@ -295,7 +303,7 @@ _REF_EXTRA = extra
         cgLoadCT, 0, RGB_TABLE=ctBW, /REVERSE
         
         ;Create the image
-        kdbIm= MrImage(kdotb_angle_data*!radeg, time, frequencies, 0.0, df, dt_plus, df, $
+        kdbIm= MrImage(kdotb_angle_data*!radeg, time, frequencies, 0.0, 0.0, dt_plus, df_plus, $
                        /AXES, $
                        /CURRENT, $
                        /NAN, $
@@ -337,7 +345,7 @@ _REF_EXTRA = extra
         cgLoadCT, 0, RGB_TABLE=ctBW, /REVERSE
         
         ;Create the image
-        CohIm = MrImage(coherency_data, time, frequencies, 0.0, df, dt_plus, df, $
+        CohIm = MrImage(coherency_data, time, frequencies, 0.0, 0.0, dt_plus, df_plus, $
                         /AXES, $
                         /CURRENT, $
                         /NAN, $
@@ -392,7 +400,7 @@ end
 ;magfile   = '/Users/argall/Documents/Work/Data/RBSP/Emfisis/A/2013_gse/01/rbsp-a_magnetometer_hires-gse_emfisis-L3_20130130_v1.3.2.cdf'
 ;data      = MrCDF_Read(magfile, 'Mag')
 acefile   = '/Users/argall/Documents/IDL/ace/test-data/ACE_MAG_LV2_RTN_HIRES_1997-270_V2.DAT'
-data      = ace_read_mag_asc(acefile, t_ssm, STIME=0.0, ETIME=86400.0)
+;data      = ace_read_mag_asc(acefile, t_ssm, STIME=0.0, ETIME=86400.0)
 nfft      = 4096
 ;dt        = 1.0 / 64.0
 dt        = 0.333

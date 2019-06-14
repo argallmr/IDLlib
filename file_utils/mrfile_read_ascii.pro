@@ -61,6 +61,7 @@
 ; :History:
 ;   Modification History::
 ;       2015/06/28  -   Written by Matthew Argall.
+;       2019/06/12  -   Added NLINES and NREPEAT keywords. - MRA
 ;-
 ;*****************************************************************************************
 ; docformat = 'rst'
@@ -80,7 +81,7 @@
 ;                   Maximum number of lines to search before quitting.
 ;
 ; :Keywords:
-;    NREPEAT:       in, optional, type=strarr
+;    NREPEAT:       in, optional, type=int
 ;                   Number of lines having the same number to be read before deciding
 ;                       that we have reached the data.
 ;
@@ -159,7 +160,7 @@ NREPEAT=nrepeat
 	
 	;Field values
 	values = strsplit(line, delim, /REGEX, /EXTRACT)
-
+	
 ;---------------------------------------------------------------------
 ; Interpret Results //////////////////////////////////////////////////
 ;---------------------------------------------------------------------
@@ -276,13 +277,18 @@ end
 ;                           `DATA_START`
 ;    MISSING_VALUE:     in, optional, type=scalar, default=!values.f_nan
 ;                       Value to use for missing items in the data
-;    NUM_RECORDS:       in, optional, type=long
-;                       Number of records to read; default is to read all available records
+;    NFOOTER:           in, optional, type=integer, default=`DATA_START-1`
+;                       Number of footer lines in the file. Will be removed from the data.
 ;    NHEADER:           in, optional, type=integer, default=0
 ;                       Number of header lines in the file to skip. A less confusing way
 ;                           to specify the `DATA_START` keyword.
-;    NFOOTER:           in, optional, type=integer, default=`DATA_START-1`
-;                       Number of footer lines in the file. Will be removed from the data.
+;    NLINES:            in, optional, type=int, default=100
+;                       Number of lines to scan for a header.
+;    NREPEAT:           in, optional, type=int, default=10
+;                       Number of lines having the same number to be read before deciding
+;                           that we have reached the data.
+;    NUM_RECORDS:       in, optional, type=long
+;                       Number of records to read; default is to read all available records
 ;    RECORD_START:      in, optional, type=long, DEFAULT=0
 ;                       Set to index of first record to read (after `DATA_START` is taken
 ;                           into account)
@@ -315,6 +321,9 @@ HASH=to_hash, $
 NHEADER=nHeader, $
 NFOOTER=nFooter, $
 SELECT=select, $
+;Ascii_Header
+NLINES=nLines, $
+NREPEAT=nRepeat, $
 ;Ascii_Template
 COLUMN_NAMES=column_names, $
 COLUMN_TYPES=column_types, $
@@ -390,9 +399,10 @@ VERBOSE=verbose
 			   (n_elements(data_start) eq 0 && n_elements(nHeader) eq 0) || $
 			   n_elements(column_types) eq 0 $
 			then begin
+				
 				;Try to read the information
-				info = MrFile_Read_Ascii_Header(_filename)
-			
+				info = MrFile_Read_Ascii_Header(_filename, !Null, nLines, NREPEAT=nRepeat)
+				
 				;Number of columns
 				if nColumns eq 0 then nColumns = info.nColumns
 				
@@ -462,6 +472,7 @@ VERBOSE=verbose
 ;---------------------------------------------------------------------
 ; Read the Data //////////////////////////////////////////////////////
 ;---------------------------------------------------------------------
+	
 	data = read_ascii(filename, $
 	                  COUNT        = count, $
 	                  HEADER       = header, $
@@ -524,18 +535,18 @@ end
 ;---------------------------------------------------------------------
 ;An example using column names and types, skipping a header, and putting
 ;everthing into its own group.
-col_names = ['lon', 'lat', 'elev', 'temp', 'dewpt', 'wind_speed', 'wind_dir']
-wdata = MrRead_Ascii(file_which('ascii.txt'), DATA_START=5, $
-                     COLUMN_TYPES=[4, 4, 3, 3, 3, 3, 3], $
-                     COLUMN_NAMES=col_names, $
-                     GROUPS=lindgen(7), COUNT=nrows)
-help, wdata
+;col_names = ['lon', 'lat', 'elev', 'temp', 'dewpt', 'wind_speed', 'wind_dir']
+;wdata = MrRead_Ascii(file_which('ascii.txt'), DATA_START=5, $
+;                     COLUMN_TYPES=[4, 4, 3, 3, 3, 3, 3], $
+;                     COLUMN_NAMES=col_names, $
+;                     GROUPS=lindgen(7), COUNT=nrows)
+;help, wdata
 
 ;This time, put each column into the same group and look for missing values.
-adata = MrRead_Ascii(file_which('ascii.dat'), DATA_START=3, $
-                     DELIMITER=string(9B), COMMENT_SYMBOL='%', $
-                     GROUPS=lonarr(4), MISSING_VALUE=-999.)
-print, adata.field0
+;adata = MrRead_Ascii(file_which('ascii.dat'), DATA_START=3, $
+;                     DELIMITER=string(9B), COMMENT_SYMBOL='%', $
+;                     GROUPS=lonarr(4), MISSING_VALUE=-999.)
+;print, adata.field0
 
-end
+;end
 

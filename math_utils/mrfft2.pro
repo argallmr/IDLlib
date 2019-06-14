@@ -333,13 +333,13 @@ WINDOW = window
 			if nFill gt 0 then begin
 				;Interpolate if we can.
 				if pct_fill le interp_pct then begin
-					if tf_verbose then print, FORMAT='(%"Interval %i has %i of %i (%0.1f\%) fill values. Interpolating.")', i+1, nFill, nfft, pct_fill
+					if tf_verbose then print, FORMAT='(%"Interval %i of %i has %i of %i (%0.1f\%) fill values. Interpolating.")', i+1, n_int, nFill, nfft, pct_fill
 					for j = 0, n2 - 1 do $
 						dtemp[0,j] = interpol(dtemp[igood,j], igood, lindgen(nfft))
 	
 				;Replace if we must.
 				endif else begin
-					if tf_verbose then print, FORMAT='(%"Interval %i has %i of %i (%0.1f\%) fill values.")', i+1, nFill, nfft, pct_fill
+					if tf_verbose then print, FORMAT='(%"Interval %i of %i has %i of %i (%0.1f\%) fill values.")', i+1, n_int, nFill, nfft, pct_fill
 					dtemp[iFill,*] = tf_double ? !values.d_nan : !values.f_nan
 				endelse
 			endif
@@ -433,7 +433,7 @@ WINDOW = window
 	;   - NFFT is constant, but DT is permitted to vary
 	;   - If DT changes, then we must keep track of FN as a function of time
 	;   - If not, then FN and F do not vary with time, and we can reduce to one copy
-	if ~tf_calc_dt || total( (dt_median - dt_median[0]) gt 0.1*dt_median[0] ) eq 0 then begin
+	if ~tf_calc_dt || total( abs(dt_median - dt_median[0]) gt 0.1*dt_median[0] ) eq 0 then begin
 		freqs     = reform(freqs[0,*])
 		df        = df[0]
 		dt_median = dt_median[0]

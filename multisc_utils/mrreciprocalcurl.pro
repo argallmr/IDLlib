@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;
 ; NAME:
-;       MrWebGet__DEFINE
+;       MrReciprocalCurl
 ;
 ;*****************************************************************************************
 ;   Copyright (c) 2014, University of New Hampshire                                      ;
